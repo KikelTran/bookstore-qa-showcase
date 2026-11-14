@@ -1,5 +1,9 @@
 # Book Store QA Showcase
 
+[![tests](https://github.com/KikelTran/bookstore-qa-showcase/actions/workflows/tests.yml/badge.svg)](https://github.com/KikelTran/bookstore-qa-showcase/actions/workflows/tests.yml)
+
+**Latest test report (from CI):** https://kikeltran.github.io/bookstore-qa-showcase/report/
+
 Playwright + TypeScript test suite for the [demoqa Book Store](https://demoqa.com/books).
 It mixes three layers in one framework:
 

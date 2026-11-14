@@ -13,7 +13,13 @@ export default defineConfig({
   workers: isCI ? 2 : undefined,
   timeout: 45_000,
   expect: { timeout: 10_000 },
-  reporter: [['list'], ['html', { open: 'never' }], ...(isCI ? [['github'] as const] : [])],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }],
+    // JUnit XML is what CI dashboards and test-management tools read.
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+    ...(isCI ? [['github'] as const] : []),
+  ],
   use: {
     baseURL: env.baseUrl,
     trace: 'retain-on-failure',
