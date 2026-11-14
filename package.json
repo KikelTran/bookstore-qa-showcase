@@ -1,0 +1,27 @@
+{
+  "name": "bookstore-qa-showcase",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright + Page Object Model + API + data setup showcase on demoqa.com Book Store",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --project=ui",
+    "test:smoke": "playwright test --grep @smoke",
+    "report": "playwright show-report",
+    "cleanup": "tsx scripts/cleanup-orphans.ts",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^20.19.43",
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^16.4.7",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

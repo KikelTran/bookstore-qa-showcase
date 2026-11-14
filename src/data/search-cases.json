@@ -1,0 +1,6 @@
+[
+  { "case": "by title keyword", "term": "Git", "expectedTitles": ["Git Pocket Guide"] },
+  { "case": "by author", "term": "Addy Osmani", "expectedTitles": ["Learning JavaScript Design Patterns"] },
+  { "case": "case insensitive", "term": "ecmascript", "expectedTitles": ["Understanding ECMAScript 6"] },
+  { "case": "no match", "term": "zzz-no-such-book", "expectedTitles": [] }
+]

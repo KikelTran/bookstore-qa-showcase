@@ -1,0 +1,14 @@
+[
+  {
+    "case": "unknown user",
+    "userName": "nosuchuser_qashow",
+    "password": "Valid@1234",
+    "error": "Invalid username or password!"
+  },
+  {
+    "case": "wrong password",
+    "userName": "{{existingUser}}",
+    "password": "Wrong@1234",
+    "error": "Invalid username or password!"
+  }
+]
