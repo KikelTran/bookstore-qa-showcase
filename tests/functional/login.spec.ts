@@ -1,7 +1,7 @@
 import { test } from '../../src/fixtures';
 import { data } from '../../src/data';
 
-test.describe('Login', { tag: '@ui' }, () => {
+test.describe('Login', { tag: '@functional' }, () => {
   test('valid user lands on profile', { tag: '@smoke' }, async ({ testUser, loginPage, profilePage }) => {
     await loginPage.open();
 

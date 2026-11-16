@@ -208,13 +208,36 @@
     <div class="stats">
       <div class="stat"><b>19</b><span>Tests</span></div>
       <div class="stat" style="--c:var(--blue)"><b>11</b><span>API</span></div>
-      <div class="stat" style="--c:var(--violet)"><b>7</b><span>UI</span></div>
+      <div class="stat" style="--c:var(--violet)"><b>7</b><span>Functional UI</span></div>
       <div class="stat" style="--c:var(--amber)"><b>1</b><span>Hybrid E2E</span></div>
       <div class="stat"><b>57/57</b><span>repeat-each=3</span></div>
       <div class="stat"><b>0</b><span>Orphan users</span></div>
       <div class="stat"><b>~40s</b><span>Full run</span></div>
       <div class="stat" style="--c:var(--red)"><b>0</b><span>Hard waits</span></div>
     </div>
+
+    <h3>Highlights</h3>
+    <div class="cards">
+      <div class="card"><h4>3 suites, one framework</h4><p>API, Functional UI and End-to-end as separate Playwright projects, plus a <code>@smoke</code> subset across all three.</p></div>
+      <div class="card"><h4>Parallel by default</h4><p><code>fullyParallel: true</code>. 19 tests in ~40 s locally, ~50 s in CI with 2 workers.</p></div>
+      <div class="card"><h4>Independent tests</h4><p>Each test creates its own user through the API and deletes it afterwards. No serial mode, no shared accounts, any test runs alone.</p></div>
+      <div class="card"><h4>POM through fixtures</h4><p>Private locators, user-level actions, <code>expectX</code> assertions. Specs contain no selectors.</p></div>
+      <div class="card"><h4>Hybrid E2E</h4><p>Arrange by API, act in the UI, assert in both the UI and the backend.</p></div>
+      <div class="card"><h4>Data layer</h4><p>JSON test data + SQLite: expected values and a ledger of created users for cleanup.</p></div>
+      <div class="card"><h4>Proven stable</h4><p><code>--repeat-each=3</code> → 57/57 green, 0 leftover users. Typecheck + format gates in CI.</p></div>
+      <div class="card"><h4>Live results</h4><p>Every push to <code>main</code> runs CI and publishes the <a href="../report/">HTML test report</a>.</p></div>
+    </div>
+
+    <h3>Test suites</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Suite</th><th>Project</th><th>Folder</th><th>Tag</th><th>Tests</th><th>Browser</th><th>Covers</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill p-api">API</span></td><td class="k">api</td><td class="k">tests/api</td><td class="k">@api</td><td>11</td><td>none</td><td>Status codes, bodies, validation, auth, catalog vs DB</td></tr>
+        <tr><td><span class="pill p-ui">Functional UI</span></td><td class="k">functional</td><td class="k">tests/functional</td><td class="k">@functional</td><td>7</td><td>Chromium</td><td>One feature at a time: login, book search (data-driven)</td></tr>
+        <tr><td><span class="pill p-e2e">E2E</span></td><td class="k">e2e</td><td class="k">tests/e2e</td><td class="k">@e2e</td><td>1</td><td>Chromium</td><td>Full journey across pages, verified in UI + API</td></tr>
+        <tr><td><span class="pill p-pass">Smoke</span></td><td>all</td><td>—</td><td class="k">@smoke</td><td>4</td><td>mixed</td><td>Fast PR gate, one critical check per area</td></tr>
+      </tbody>
+    </table></div>
 
     <div class="callout">
       <p><strong>One-line design:</strong> use the API to arrange data, use the UI only for the behaviour under test, then assert on both the UI and the backend. Every test creates its own data and cleans it up, pass or fail.</p>
@@ -274,7 +297,7 @@
     <div class="sec-head"><h2>Repository layout</h2><span class="badge blue">Architecture</span></div>
     <p>About 665 lines of TypeScript in total. Small files, one job each.</p>
 <div class="tree">bookstore-qa-showcase/
-├── playwright.config.ts       <i># projects: api (no browser) + ui (chromium), CI retries, traces</i>
+├── playwright.config.ts       <i># projects: api (no browser), functional + e2e (chromium)</i>
 ├── src/
 │   ├── config/env.ts          <i># env vars + prefix validation</i>
 │   ├── api/
@@ -289,7 +312,7 @@
 │   └── global-setup.ts        <i># JSON → DB seed</i>
 ├── tests/
 │   ├── api/bookstore.api.spec.ts
-│   ├── ui/login.spec.ts · ui/book-search.spec.ts
+│   ├── functional/login.spec.ts · functional/book-search.spec.ts
 │   └── e2e/collection.e2e.spec.ts
 ├── scripts/cleanup-orphans.ts <i># ledger-driven cleanup</i>
 └── .github/workflows/tests.yml <i># quality gate → tests → cleanup → report</i></div>
@@ -310,7 +333,7 @@
         <tr><td class="k">Errors</td><td>Setup helpers throw with action, expected status, actual status, URL and body.</td><td><code>create user: expected 201, got 400 …/Account/v1/User {"code":"1300",…}</code></td></tr>
         <tr><td class="k">Naming</td><td>Classes PascalCase, files match class, booleans <code>is/has</code>, constants UPPER_SNAKE, tests describe behaviour.</td><td><code>'duplicate user name is rejected with 406'</code></td></tr>
         <tr><td class="k">Comments</td><td>Explain <em>why</em>, not what. Short.</td><td><code>// A UI login issues a new token and kills the old one…</code></td></tr>
-        <tr><td class="k">Tags</td><td><code>@api @ui @e2e</code> per area, <code>@smoke</code> for the PR gate.</td><td><code>npm run test:smoke</code> runs the fast subset.</td></tr>
+        <tr><td class="k">Tags</td><td><code>@api @functional @e2e</code> per suite, <code>@smoke</code> for the PR gate.</td><td><code>npm run test:smoke</code> runs the fast subset.</td></tr>
         <tr><td class="k">Gates</td><td><code>tsc --noEmit</code> (strict) and <code>prettier --check</code> run before tests in CI.</td><td>Style arguments are settled by tools, not by reviewers.</td></tr>
       </tbody>
     </table></div>
@@ -460,7 +483,7 @@ context: <span class="kw">async</span> ({ context }, use) =&gt; {
       <div class="card"><h4>reference-books.json</h4><p>Expected catalog values (ISBN, title, author, pages). Seeded into the DB in globalSetup.</p></div>
       <div class="card"><h4>login-negative.json</h4><p>Negative login rows. <code>{{existingUser}}</code> is replaced at runtime with a freshly created user.</p></div>
       <div class="card"><h4>password-rules.json</h4><p>4 weak passwords, one per rule. Drives 4 API tests.</p></div>
-      <div class="card"><h4>search-cases.json</h4><p>Title, author, case-insensitive and no-match searches. Drives 4 UI tests.</p></div>
+      <div class="card"><h4>search-cases.json</h4><p>Title, author, case-insensitive and no-match searches. Drives 4 functional UI tests.</p></div>
     </div>
     <h3>Database schema</h3>
     <div class="two">
@@ -539,7 +562,7 @@ listOrphans(prefix: <span class="ty">string</span>): <span class="ty">LedgerUser
       <label>Layer</label>
       <button class="chip" data-layer="all" aria-pressed="true">All <span>19</span></button>
       <button class="chip" data-layer="api" aria-pressed="false">API <span>11</span></button>
-      <button class="chip" data-layer="ui" aria-pressed="false">UI <span>7</span></button>
+      <button class="chip" data-layer="ui" aria-pressed="false">Functional UI <span>7</span></button>
       <button class="chip" data-layer="e2e" aria-pressed="false">E2E <span>1</span></button>
       <button class="chip" data-layer="smoke" aria-pressed="false">@smoke <span>4</span></button>
     </div>
@@ -561,13 +584,13 @@ listOrphans(prefix: <span class="ty">string</span>): <span class="ty">LedgerUser
         <tr data-layer="api"><td>9</td><td><span class="pill p-api">API</span></td><td>Add books without token is 401</td><td>testUser + reference-books.json</td><td>401, code 1200</td><td><span class="pill p-pass">PASS</span></td></tr>
         <tr data-layer="api"><td>10</td><td><span class="pill p-api">API</span></td><td>Unknown ISBN is rejected with 400</td><td>testUser fixture</td><td>400, code 1205</td><td><span class="pill p-pass">PASS</span></td></tr>
         <tr data-layer="api"><td>11</td><td><span class="pill p-api">API</span></td><td>Added books appear in the user profile</td><td>testUser + reference-books.json</td><td>ISBN list equal, in order</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui" data-smoke="1"><td>12</td><td><span class="pill p-ui">UI</span></td><td>Valid user lands on profile</td><td>testUser fixture</td><td>profile shows user name</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui"><td>13</td><td><span class="pill p-ui">UI</span></td><td>Shows error for unknown user</td><td>login-negative.json</td><td>"Invalid username or password!"</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui"><td>14</td><td><span class="pill p-ui">UI</span></td><td>Shows error for wrong password</td><td>login-negative.json + testUser</td><td>"Invalid username or password!"</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui"><td>15</td><td><span class="pill p-ui">UI</span></td><td>Search by title keyword: "Git"</td><td>search-cases.json</td><td>exact title list</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui"><td>16</td><td><span class="pill p-ui">UI</span></td><td>Search by author: "Addy Osmani"</td><td>search-cases.json</td><td>exact title list</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui"><td>17</td><td><span class="pill p-ui">UI</span></td><td>Search case insensitive: "ecmascript"</td><td>search-cases.json</td><td>exact title list</td><td><span class="pill p-pass">PASS</span></td></tr>
-        <tr data-layer="ui"><td>18</td><td><span class="pill p-ui">UI</span></td><td>Search no match: "zzz-no-such-book"</td><td>search-cases.json</td><td>empty table</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui" data-smoke="1"><td>12</td><td><span class="pill p-ui">Functional</span></td><td>Valid user lands on profile</td><td>testUser fixture</td><td>profile shows user name</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui"><td>13</td><td><span class="pill p-ui">Functional</span></td><td>Shows error for unknown user</td><td>login-negative.json</td><td>"Invalid username or password!"</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui"><td>14</td><td><span class="pill p-ui">Functional</span></td><td>Shows error for wrong password</td><td>login-negative.json + testUser</td><td>"Invalid username or password!"</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui"><td>15</td><td><span class="pill p-ui">Functional</span></td><td>Search by title keyword: "Git"</td><td>search-cases.json</td><td>exact title list</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui"><td>16</td><td><span class="pill p-ui">Functional</span></td><td>Search by author: "Addy Osmani"</td><td>search-cases.json</td><td>exact title list</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui"><td>17</td><td><span class="pill p-ui">Functional</span></td><td>Search case insensitive: "ecmascript"</td><td>search-cases.json</td><td>exact title list</td><td><span class="pill p-pass">PASS</span></td></tr>
+        <tr data-layer="ui"><td>18</td><td><span class="pill p-ui">Functional</span></td><td>Search no match: "zzz-no-such-book"</td><td>search-cases.json</td><td>empty table</td><td><span class="pill p-pass">PASS</span></td></tr>
         <tr data-layer="e2e" data-smoke="1"><td>19</td><td><span class="pill p-e2e">E2E</span></td><td>User removes a book from the profile</td><td>signedInUser + reference-books.json</td><td>UI list + API collection (polled)</td><td><span class="pill p-pass">PASS</span></td></tr>
       </tbody>
     </table></div>
@@ -600,7 +623,8 @@ listOrphans(prefix: <span class="ty">string</span>): <span class="ty">LedgerUser
       <thead><tr><th>Playwright project</th><th>Test dir</th><th>Browser</th><th>Why separate</th></tr></thead>
       <tbody>
         <tr><td class="k">api</td><td>tests/api</td><td>none</td><td>Fast feedback, runs in seconds, no browser download needed.</td></tr>
-        <tr><td class="k">ui</td><td>tests (minus api/)</td><td>Desktop Chrome</td><td>UI + E2E. Adding Firefox/WebKit is one more project entry.</td></tr>
+        <tr><td class="k">functional</td><td>tests/functional</td><td>Desktop Chrome</td><td>Feature-level UI checks; run alone with <code>npm run test:functional</code>.</td></tr>
+        <tr><td class="k">e2e</td><td>tests/e2e</td><td>Desktop Chrome</td><td>Cross-page journeys. Adding Firefox/WebKit is one more project entry.</td></tr>
       </tbody>
     </table></div>
   </section>

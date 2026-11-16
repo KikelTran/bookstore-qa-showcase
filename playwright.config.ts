@@ -6,10 +6,12 @@ const isCI = !!process.env.CI;
 export default defineConfig({
   testDir: './tests',
   globalSetup: './src/global-setup.ts',
+  // Every test creates its own data, so all tests (and tests inside one file) can run at the same time.
   fullyParallel: true,
   forbidOnly: isCI,
   // Retries hide flakiness locally; in CI one retry + trace gives evidence without blocking the pipeline.
   retries: isCI ? 1 : 0,
+  // Local: Playwright default (half the CPU cores). CI: 2 workers on a 2-vCPU runner.
   workers: isCI ? 2 : undefined,
   timeout: 45_000,
   expect: { timeout: 10_000 },
@@ -27,7 +29,9 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   projects: [
+    // One project per suite: run one with --project, or all together.
     { name: 'api', testDir: './tests/api' },
-    { name: 'ui', testDir: './tests', testIgnore: /api\//, use: { ...devices['Desktop Chrome'] } },
+    { name: 'functional', testDir: './tests/functional', use: { ...devices['Desktop Chrome'] } },
+    { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
   ],
 });

@@ -1,7 +1,7 @@
 import { test } from '../../src/fixtures';
 import { data } from '../../src/data';
 
-test.describe('Book search', { tag: '@ui' }, () => {
+test.describe('Book search', { tag: '@functional' }, () => {
   for (const { case: name, term, expectedTitles } of data.searchCases) {
     test(`search ${name}: "${term}"`, async ({ bookStorePage }) => {
       await bookStorePage.open();
