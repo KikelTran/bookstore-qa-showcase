@@ -27,23 +27,115 @@ It shows how I structure a suite that mixes UI, API and data setup, and why.
 Design reasons, strengths and trade-offs: **[docs/DESIGN-NOTES.md](docs/DESIGN-NOTES.md)**.
 Walkthrough page: **https://kikeltran.github.io/bookstore-qa-showcase/docs/showcase.html** (or open `docs/showcase.html` locally) (architecture, coding style, test matrix, strengths, trade-offs).
 
-## Run
+## Setup
+
+**Prerequisites**
+
+| Tool    | Version           | Check           |
+| ------- | ----------------- | --------------- |
+| Node.js | 20.x (CI uses 20) | `node -v`       |
+| npm     | 10.x              | `npm -v`        |
+| Git     | any               | `git --version` |
+
+No database server is needed: SQLite is a file created on the first run. No account is needed: tests create their own demoqa users.
+
+**Install**
 
 ```bash
-npm ci
-npx playwright install chromium
-cp .env.example .env        # optional, defaults work
-
-npm test                    # all 3 suites in parallel
-npm run test:api            # API suite (no browser starts)
-npm run test:functional     # Functional UI suite
-npm run test:e2e            # End-to-end suite
-npm run test:smoke          # @smoke subset across suites
-npm run report              # open the HTML report
-npm run cleanup             # delete users left behind by a killed run
+git clone https://github.com/KikelTran/bookstore-qa-showcase.git
+cd bookstore-qa-showcase
+npm ci                              # exact versions from package-lock.json
+npx playwright install chromium     # browser for the functional + e2e suites
 ```
 
-Quality gates: `npm run typecheck` and `npm run format:check`. Every test passed with `--repeat-each=3` and left 0 orphan users.
+**Configuration (optional)**
+
+Defaults work as-is. To change them, copy `.env.example` to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+| Variable           | Default              | Meaning                                                                                                          |
+| ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `BASE_URL`         | `https://demoqa.com` | Site and API under test                                                                                          |
+| `TEST_DATA_PREFIX` | `qashow`             | Prefix for every user the suite creates. Lowercase letters/digits, 3–12 chars. Cleanup only touches this prefix. |
+| `DB_PATH`          | `./test-data.db`     | SQLite file (reference data + created-users ledger)                                                              |
+| `CI`               | unset                | Set by GitHub Actions. Turns on 2 workers, 1 retry, traces for every test, `forbidOnly`                          |
+
+## Run the tests
+
+```bash
+npm test                     # all 3 suites in one parallel run (19 tests, ~40 s)
+npm run test:api             # API suite only, no browser starts (11 tests)
+npm run test:functional      # Functional UI suite (7 tests)
+npm run test:e2e             # End-to-end suite (1 test)
+npm run test:smoke           # @smoke subset across all suites (4 tests)
+```
+
+Any Playwright CLI option can be added after `--`, or used with `npx playwright test`:
+
+```bash
+npx playwright test -g "duplicate user"             # one test by name
+npx playwright test tests/functional/login.spec.ts  # one file
+npx playwright test --grep @smoke --project=api     # tag + suite
+npx playwright test --headed --project=e2e          # watch the browser
+npx playwright test --ui                            # interactive UI mode: pick, run, time-travel
+npx playwright test --debug -g "removes a book"     # step through with the inspector
+npx playwright test --repeat-each=3                 # flakiness check
+npx playwright test --workers=1                     # run one test at a time
+```
+
+| Option                             | Meaning                                                  |
+| ---------------------------------- | -------------------------------------------------------- |
+| `--project=<api\|functional\|e2e>` | Run one suite                                            |
+| `--grep <text\|@tag>` / `-g`       | Filter by test title or tag                              |
+| `--headed`                         | Show the browser (UI suites)                             |
+| `--ui`                             | Playwright UI mode                                       |
+| `--debug`                          | Pause on each step with the Playwright Inspector         |
+| `--repeat-each=N`                  | Run every test N times                                   |
+| `--workers=N`                      | Number of parallel workers (default: half the CPU cores) |
+
+**What a run does, step by step**
+
+1. `global-setup.ts` loads `src/data/reference-books.json` into the SQLite `reference_books` table.
+2. Each worker opens one SQLite connection (WAL mode, safe for parallel writes).
+3. For a test that needs a user, the `testUser` fixture creates one through the API, writes it to the `created_users` ledger, and gets a token. `signedInUser` also sets the session cookies in the browser.
+4. The test runs: API calls and/or page-object actions, then assertions.
+5. Teardown gets a fresh token, deletes the user, and marks the ledger row as deleted. This happens even when the test fails.
+6. Reporters write `playwright-report/` (HTML) and `test-results/junit.xml`.
+
+## Reports
+
+| Where             | How to open                                               | Contents                                                                   |
+| ----------------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Local HTML report | `npm run report`                                          | Every test with steps and duration. Failed tests: trace, screenshot, video |
+| Local JUnit       | `test-results/junit.xml`                                  | Machine-readable results for CI tools                                      |
+| CI live report    | https://kikeltran.github.io/bookstore-qa-showcase/report/ | Latest run on `main`, **trace for every test**                             |
+| CI artifact       | Actions → run → Artifacts → `playwright-report`           | Same report + `junit.xml`, kept 7 days                                     |
+
+**Open a trace:** in the HTML report, open a test and click the **Trace** section. The Trace Viewer shows each action with a DOM snapshot, network calls (including the API setup calls), console output and the source line. A trace file can also be opened directly: `npx playwright show-trace <path/to/trace.zip>`.
+
+## CI (GitHub Actions)
+
+`.github/workflows/tests.yml` runs on every push to `main`, on pull requests and on manual dispatch:
+
+| Job            | Steps                                                                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quality`      | `npm ci` → `npm run typecheck` → `npm run format:check`                                                                                       |
+| `test`         | install Chromium → `npx playwright test` (2 workers, 1 retry, prefix `qaci`, traces on) → `npm run cleanup` (always) → upload report artifact |
+| `deploy-pages` | Push to `main` only: publish `docs/` + the HTML report to GitHub Pages (also when tests fail, so failures are visible)                        |
+
+## Cleanup and quality gates
+
+```bash
+npm run cleanup        # delete users left behind by a killed run (reads the SQLite ledger)
+npm run typecheck      # tsc --noEmit, strict mode
+npm run format:check   # prettier --check
+npm run format         # prettier --write
+```
+
+Every test passed with `--repeat-each=3` and left 0 orphan users.
 
 ## Test strategy
 
@@ -64,23 +156,29 @@ Quality gates: `npm run typecheck` and `npm run format:check`. Every test passed
 
 Any single test can run alone (`npx playwright test -g "duplicate user"`), and the whole suite passes with `--repeat-each=3`.
 
-## Layout
+## Files
 
-```
-src/
-  config/env.ts          env vars + validation (one place)
-  api/                   BookStoreClient, endpoints, types
-  pages/                 BasePage, LoginPage, ProfilePage, BookStorePage
-  fixtures/index.ts      test.extend: api, db, testUser, signedInUser, page objects
-  data/*.json            reference books, negative login, password rules, search cases
-  db/TestDataDb.ts       SQLite: reference_books + created_users ledger
-  global-setup.ts        seeds JSON into the DB once per run
-tests/
-  api/                   pure API tests
-  functional/            functional UI tests (data-driven from JSON)
-  e2e/                   hybrid: API arrange -> UI act -> UI + API assert
-scripts/cleanup-orphans.ts
-```
+| File / folder                      | Purpose                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `playwright.config.ts`             | Projects (`api`, `functional`, `e2e`), parallel workers, retries, reporters, traces         |
+| `src/config/env.ts`                | Reads and validates env vars in one place                                                   |
+| `src/api/BookStoreClient.ts`       | Typed API client: setup helpers (throw on unexpected status) + `raw*` methods for API tests |
+| `src/api/endpoints.ts`, `types.ts` | API paths and response types                                                                |
+| `src/pages/`                       | Page objects: `BasePage`, `LoginPage`, `ProfilePage`, `BookStorePage`                       |
+| `src/fixtures/index.ts`            | `test.extend`: `api`, `db`, `testUser`, `signedInUser`, page objects, ad blocking           |
+| `src/data/*.json`                  | Test data: reference books, negative logins, password rules, search cases                   |
+| `src/db/TestDataDb.ts`             | SQLite: `reference_books` + `created_users` ledger                                          |
+| `src/global-setup.ts`              | Seeds JSON into the DB once per run                                                         |
+| `src/utils/test-data.ts`           | Unique user names and strong passwords                                                      |
+| `tests/api/`                       | API suite                                                                                   |
+| `tests/functional/`                | Functional UI suite (data-driven from JSON)                                                 |
+| `tests/e2e/`                       | End-to-end suite: API arrange → UI act → UI + API assert                                    |
+| `scripts/cleanup-orphans.ts`       | Ledger-driven cleanup of leftover users                                                     |
+| `docs/showcase.html`               | Walkthrough page: architecture, coding style, test matrix, trade-offs                       |
+| `docs/DESIGN-NOTES.md`             | Design decisions, strengths, trade-offs                                                     |
+| `.github/workflows/tests.yml`      | CI pipeline + GitHub Pages deploy                                                           |
+| `.env.example`                     | Config template (copy to `.env`, gitignored)                                                |
+| `test-data.db`                     | SQLite file created at run time (gitignored)                                                |
 
 ## How a hybrid test reads
 
@@ -98,3 +196,17 @@ test('user removes a book from the profile', async ({ api, signedInUser, profile
 ```
 
 `signedInUser` creates a user by API, injects the session cookies, and deletes the user after the test, pass or fail.
+
+## Troubleshooting
+
+| Issue                                                      | Fix                                                                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `Executable doesn't exist ... chromium`                    | `npx playwright install chromium` (on Linux CI: `--with-deps`)                                                                  |
+| `Cannot find module 'better-sqlite3'` / native build error | Use Node 20, delete `node_modules`, then `npm ci`                                                                               |
+| `TEST_DATA_PREFIX must match /^[a-z0-9]{3,12}$/`           | Use 3–12 lowercase letters or digits in `.env`                                                                                  |
+| `create user: expected 201, got 5xx`                       | demoqa is down or rate-limiting; check https://demoqa.com/books, then run again                                                 |
+| `delete user: expected 204, got 401` in teardown           | Token was replaced (e.g. by a UI login). The fixture already asks for a fresh token; if it still happens, run `npm run cleanup` |
+| `database is locked`                                       | Another run is using `test-data.db`; wait for it, or delete the file (it is rebuilt on the next run)                            |
+| Functional/e2e tests time out on page load                 | Network or third-party scripts slow; ads are already blocked by the `context` fixture. Run again with `--workers=2`             |
+| Users left on demoqa after a killed run                    | `npm run cleanup`                                                                                                               |
+| Report shows no trace for a passing test locally           | Expected: locally traces are kept for failures only. Add `--trace on` to record all                                             |

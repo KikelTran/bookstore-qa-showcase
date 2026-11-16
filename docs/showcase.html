@@ -605,7 +605,7 @@ listOrphans(prefix: <span class="ty">string</span>): <span class="ty">LedgerUser
           <li><strong>No fixed sleeps.</strong> List assertions (<code>toHaveText([...])</code>) retry until count and order match.</li>
           <li><strong>Third-party noise removed.</strong> Ad and tracker requests are aborted at the context level. They slowed pages and covered buttons.</li>
           <li><strong>Isolation.</strong> No shared accounts, so <code>fullyParallel: true</code> is safe.</li>
-          <li><strong>Evidence.</strong> <code>trace</code>, <code>video</code> retained on failure, screenshot on failure.</li>
+          <li><strong>Evidence.</strong> CI records a <code>trace</code> for <em>every</em> test, so the <a href="../report/">published report</a> can be replayed step by step. Locally: trace and video kept on failure, screenshot on failure.</li>
           <li><strong>Retries only in CI</strong> (1), so flakiness shows up locally first.</li>
           <li><strong>Proof.</strong> <code>--repeat-each=3</code> → 57/57, ledger shows 0 orphans.</li>
         </ul>
@@ -614,7 +614,7 @@ listOrphans(prefix: <span class="ty">string</span>): <span class="ty">LedgerUser
         <h3 style="margin-top:0">Pipeline (GitHub Actions)</h3>
         <div class="flow" style="flex-direction:column">
           <div class="step"><em>quality</em><p><code>npm ci</code> → <code>tsc --noEmit</code> → <code>prettier --check</code></p></div>
-          <div class="step"><em>test · needs quality</em><p>install chromium → <code>playwright test</code> (2 workers, 1 retry, prefix <code>qaci</code>)</p></div>
+          <div class="step"><em>test · needs quality</em><p>install chromium → <code>playwright test</code> (2 workers, 1 retry, prefix <code>qaci</code>, traces on)</p></div>
           <div class="step td"><em>if: always()</em><p><code>npm run cleanup</code> → upload <code>playwright-report</code> (7 days)</p></div>
         </div>
       </div>

@@ -24,7 +24,8 @@ export default defineConfig({
   ],
   use: {
     baseURL: env.baseUrl,
-    trace: 'retain-on-failure',
+    // CI: trace every test so the published report shows each run step by step. Local: keep traces of failures only.
+    trace: isCI ? 'on' : 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
